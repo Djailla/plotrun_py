@@ -1,23 +1,31 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import numpy as np
-import gpxpy
-from geopy.distance import vincenty
+"""
+Summary: Plot run information from a GPX File
+Author: Bastien Vallet
+Copyright (c) 2014, Bastien Vallet
+
+Run with: python plotrun.py [GPX file path]
+"""
+
+import argparse
+import os
 import pprint
 
+# numpy lib to boost median and mean calculation
+import numpy as np
+
+# gpxpy to easly extract data from GPX file
+import gpxpy
+
+# geopy to calculate distance from the GPS coordonates
+from geopy.distance import vincenty
+
+# pygal to draw SVG output files
 import pygal
-# from pygal.style import LightenStyle
 
 pp = pprint.PrettyPrinter(indent=4)
-PREFIX_DIR = 'sample/'
-PREFIX = 'frac2'
-
-GPX_FILE = PREFIX_DIR + PREFIX + '.gpx'
-CSV_OUT = PREFIX_DIR + PREFIX + '.csv'
-SVG_OUT = PREFIX_DIR + PREFIX + '.svg'
-
-test_list = [1., 1., 1., 2., 2., 2., 3., 3., 3., 4.]
 
 
 def running_mean(x, N):
@@ -45,62 +53,82 @@ def running_median(x, N):
         median[idx] = np.median(x[min_idx: idx + mid_interval])
     return median
 
+if __name__ == '__main__':
+    # logging.basicConfig(format='%(levelname)s: %(message)s',
+    #                     level=logging.DEBUG)
 
-with open(GPX_FILE, 'r') as gpx_file:
-    gpx = gpxpy.parse(gpx_file)
-    gpx_points = []
+    parser = argparse.ArgumentParser(description='Set the parameters.')
+    parser.add_argument('--raw', action='store_true')
+    parser.add_argument('--mean', action='store_true')
+    parser.add_argument('--median', action='store_true')
+    parser.add_argument('--elevation', action='store_true')
+    parser.add_argument('gpx_file')
 
-    for track in gpx.tracks:
-        for segment in track.segments:
-            ref_time = segment.points[0].time
+    args = parser.parse_args()
 
-            for point in segment.points:
-                gpx_points.append(
-                    {
-                        'time': (point.time - ref_time).total_seconds(),
-                        'coordonates': (point.latitude, point.longitude),
-                        'elevation': point.elevation,
-                    }
-                )
+    # Check that at least one parameter is provided
+    if not any([args.raw, args.mean, args.median, args.elevation]):
+        print '*' * 33
+        print "* Add at least one plot to draw *"
+        print '*' * 33
+        parser.print_help()
+        exit(1)
 
-    prev = gpx_points[0]
-    gpx_points[0]['distance'] = 0
-    gpx_points[0]['speed'] = 0
+    gpx_dir, gpx_file_name = os.path.split(args.gpx_file)
+    gpx_file_prefix, gpx_file_extension = os.path.splitext(gpx_file_name)
+    svg_path = os.path.join(gpx_dir, gpx_file_prefix + '.svg')
 
-    distances = []
-    for gpx_point in gpx_points[1:]:
-        d = vincenty(prev['coordonates'], gpx_point['coordonates']).meters
-        gpx_point['distance'] = d
-        gpx_point['speed'] = d / (gpx_point['time'] - prev['time']) * 3.6
+    with open(args.gpx_file, 'r') as gpx_file:
+        gpx = gpxpy.parse(gpx_file)
+        gpx_points = []
 
-        prev = gpx_point
-        # distances.append(d)
+        for track in gpx.tracks:
+            for segment in track.segments:
+                ref_time = segment.points[0].time
 
-    gpx_points[0]['speed'] = gpx_points[1]['speed']
+                for point in segment.points:
+                    gpx_points.append(
+                        {
+                            'time': (point.time - ref_time).total_seconds(),
+                            'coordonates': (point.latitude, point.longitude),
+                            'elevation': point.elevation,
+                        }
+                    )
 
-    gpx_speed = [gpx_point['speed'] for gpx_point in gpx_points]
-    speed_mean = running_mean(gpx_speed, 20)
-    speed_median = running_median(gpx_speed, 20)
+        prev = gpx_points[0]
+        gpx_points[0]['distance'] = 0
+        gpx_points[0]['speed'] = 0
 
-    # with open(CSV_OUT, 'w') as csv_out:
-    #     for idx in range(len(gpx_points)):
-    #         csv_out.write(
-    #             '%f;%f;%f;%f\n' % (
-    #                 gpx_points[idx]['time'],
-    #                 gpx_points[idx]['speed'],
-    #                 speed_mean[idx],
-    #                 speed_median[idx],
-    #             )
-    #         )
+        distances = []
+        for gpx_point in gpx_points[1:]:
+            d = vincenty(prev['coordonates'], gpx_point['coordonates']).meters
+            gpx_point['distance'] = d
+            gpx_point['speed'] = d / (gpx_point['time'] - prev['time']) * 3.6
 
-    # print "Average speed = %f" % np.mean([gpx_point['speed'] for gpx_point in gpx_points])
+            prev = gpx_point
+            # distances.append(d)
 
-# dark_lighten_style = LightenStyle('#336676')
+        gpx_points[0]['speed'] = gpx_points[1]['speed']
 
-xy_chart = pygal.XY(stroke=True, show_dots=False, width=1500, height=1000)
-xy_chart.title = 'Speed'
-# xy_chart.add('Raw speed', [(gpx_point['time'], gpx_point['speed']) for gpx_point in gpx_points])
-# xy_chart.add('Average speed', [(gpx_points[idx]['time'], speed_mean[idx]) for idx in xrange(len(gpx_points))])
-xy_chart.add('Mediam speed', [(gpx_points[idx]['time'], speed_median[idx]) for idx in xrange(len(gpx_points))])
-# xy_chart.add('Elevation', [(gpx_point['time'], gpx_point['elevation']) for gpx_point in gpx_points])
-xy_chart.render_to_file(SVG_OUT)
+        gpx_speed = [gpx_point['speed'] for gpx_point in gpx_points]
+        if args.mean:
+            speed_mean = running_mean(gpx_speed, 20)
+
+        if args.median:
+            speed_median = running_median(gpx_speed, 20)
+
+    xy_chart = pygal.XY(stroke=True, show_dots=False, width=1500, height=1000)
+    xy_chart.title = 'Speed'
+    if args.raw:
+        xy_chart.add('Raw speed', [(gpx_point['time'], gpx_point['speed'])
+                     for gpx_point in gpx_points])
+    if args.mean:
+        xy_chart.add('Average speed', [(gpx_points[idx]['time'], speed_mean[idx])
+                     for idx in xrange(len(gpx_points))])
+    if args.median:
+        xy_chart.add('Mediam speed', [(gpx_points[idx]['time'], speed_median[idx])
+                     for idx in xrange(len(gpx_points))])
+    if args.elevation:
+        xy_chart.add('Elevation', [(gpx_point['time'], gpx_point['elevation'])
+                     for gpx_point in gpx_points])
+    xy_chart.render_to_file(svg_path)
