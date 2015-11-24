@@ -62,6 +62,8 @@ if __name__ == '__main__':
     parser.add_argument('--mean', action='store_true')
     parser.add_argument('--median', action='store_true')
     parser.add_argument('--elevation', action='store_true')
+    parser.add_argument('--bpm', action='store_true')
+    parser.add_argument('--pace', action='store_true', help='Enabled to switch from speed to pace')
     parser.add_argument('gpx_file')
 
     args = parser.parse_args()
@@ -103,10 +105,14 @@ if __name__ == '__main__':
         for gpx_point in gpx_points[1:]:
             d = vincenty(prev['coordonates'], gpx_point['coordonates']).meters
             gpx_point['distance'] = d
-            gpx_point['speed'] = d / (gpx_point['time'] - prev['time']) * 3.6
+            t = gpx_point['time'] - prev['time']
+
+            if args.pace:
+                gpx_point['speed'] = t / d * 100 / 6
+            else:
+                gpx_point['speed'] = d / t * 3.6
 
             prev = gpx_point
-            # distances.append(d)
 
         gpx_points[0]['speed'] = gpx_points[1]['speed']
 
@@ -118,15 +124,18 @@ if __name__ == '__main__':
             speed_median = running_median(gpx_speed, 20)
 
     xy_chart = pygal.XY(stroke=True, show_dots=False, width=1500, height=1000)
-    xy_chart.title = 'Speed'
+
+    speed_str = args.pace and 'Pace' or 'Speed'
+
+    xy_chart.title = speed_str
     if args.raw:
-        xy_chart.add('Raw speed', [(gpx_point['time'], gpx_point['speed'])
+        xy_chart.add('Raw %s' % speed_str, [(gpx_point['time'], gpx_point['speed'])
                      for gpx_point in gpx_points])
     if args.mean:
-        xy_chart.add('Average speed', [(gpx_points[idx]['time'], speed_mean[idx])
+        xy_chart.add('Average %s' % speed_str, [(gpx_points[idx]['time'], speed_mean[idx])
                      for idx in xrange(len(gpx_points))])
     if args.median:
-        xy_chart.add('Mediam speed', [(gpx_points[idx]['time'], speed_median[idx])
+        xy_chart.add('Mediam %s' % speed_str, [(gpx_points[idx]['time'], speed_median[idx])
                      for idx in xrange(len(gpx_points))])
     if args.elevation:
         xy_chart.add('Elevation', [(gpx_point['time'], gpx_point['elevation'])
