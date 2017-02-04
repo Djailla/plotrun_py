@@ -16,7 +16,7 @@ setup(
         'numpy',
         'gpxpy',
         'geopy',
-        'pygal',
+        'matplotlib'
     ],
     classifiers=[
         "Programming Language :: Python",
