@@ -9,11 +9,10 @@ Copyright (c) 2014, Bastien Vallet
 Run with: python plotrun.py [GPX file path]
 """
 
-import argparse
-from math import sqrt
+# Compat
+from __future__ import absolute_import, division, print_function
 
-# numpy lib to boost median and mean calculation
-import numpy as np
+import argparse
 
 # gpxpy to easly extract data from GPX file
 import gpxpy
@@ -24,76 +23,20 @@ from geopy.distance import vincenty
 # matplotlib for dynamical display view
 import matplotlib.pyplot as plt
 
+from helper import (
+    moving_average,
+    moving_median,
+    hull_average,
+)
 
 WINDOWS_SIZE = 15
 
 
-def moving_average(gpx_points, windows_size):
-    """Compute moving average for value list"""
-    x_values = [gpx_point.raw_speed for gpx_point in gpx_points]
-    mid_interval = windows_size // 2
-    cumsum = np.cumsum(x_values)
-
-    x_len = len(x_values)
-    x_len_interval = x_len - mid_interval
-
-    for x_idx in xrange(x_len):
-        min_idx = x_idx > mid_interval and x_idx - mid_interval or 0
-        max_idx = x_idx < x_len_interval and x_idx + mid_interval or (x_len - 1)
-        gpx_points[x_idx].average_speed = (
-            cumsum[max_idx] - cumsum[min_idx]) / (max_idx - min_idx)
-
-
-def moving_average_list(input_list, windows_size):
-    """Compute moving average for value list"""
-    output_list = np.empty_like(input_list)
-    mid_interval = windows_size // 2
-    cumsum = np.cumsum(input_list)
-
-    x_len = len(input_list)
-    x_len_interval = x_len - mid_interval
-
-    for x_idx in xrange(x_len):
-        min_idx = x_idx > mid_interval and x_idx - mid_interval or 0
-        max_idx = x_idx < x_len_interval and x_idx + mid_interval or (x_len - 1)
-        output_list[x_idx] = (
-            cumsum[max_idx] - cumsum[min_idx]) / (max_idx - min_idx)
-
-    return output_list
-
-
-def moving_median(gpx_points, windows_size):
-    """Compute moving median for value list"""
-    x_values = [gpx_point.raw_speed for gpx_point in gpx_points]
-    mid_interval = windows_size // 2
-
-    for x_idx in xrange(len(x_values)):
-        min_idx = x_idx > mid_interval and x_idx - mid_interval or None
-        gpx_points[x_idx].median_speed = \
-            np.median(x_values[min_idx: x_idx + mid_interval])
-
-
-def hull_average(gpx_points, windows_size):
-    """Compute hull average for value list"""
-    x_values = [gpx_point.raw_speed for gpx_point in gpx_points]
-
-    moving_average_half = moving_average_list(x_values, windows_size/2)
-    moving_average_full = moving_average_list(x_values, windows_size)
-
-    temp_list = np.cumsum(x_values)
-    for x_idx in xrange(len(x_values)):
-        temp_list[x_idx] = 2 * moving_average_half[x_idx] - \
-                           moving_average_full[x_idx]
-
-    hull_list = moving_average_list(temp_list, int(sqrt(windows_size)))
-    for x_idx in xrange(len(x_values)):
-        gpx_points[x_idx].hull_speed = hull_list[x_idx]
-
-
-def display_in_graph(gpx_points, value_type, color="blue"):
+def display_in_graph(gpx_points, value_type, color="blue", x_axis='time'):
     """Add a data in final graph"""
     plt.plot(
-        [gpx_point.time for gpx_point in gpx_points],
+        [gpx_point.time for gpx_point in gpx_points] if x_axis == 'time' else
+        [gpx_point.cumulative_distance for gpx_point in gpx_points],
         [getattr(gpx_point, value_type) for gpx_point in gpx_points],
         color=color, linewidth=1.0, linestyle="-",
         label=value_type
@@ -107,6 +50,7 @@ class GPXPoint(object):
     coordonates = None
     elevation = None
     distance = 0
+    cumulative_distance = 0
 
     raw_speed = 0
     median_speed = 0
@@ -118,8 +62,7 @@ class GPXPoint(object):
         self.coordonates = coordonates
         self.elevation = elevation
 
-
-def main():
+def get_parser():
     parser = argparse.ArgumentParser(description='Set the parameters.')
     parser.add_argument('--raw', action='store_true')
     parser.add_argument('--average', action='store_true')
@@ -131,20 +74,22 @@ def main():
     parser.add_argument('--pace', action='store_true', help='Enabled to switch from speed to pace')
     parser.add_argument('gpx_file')
 
-    args = parser.parse_args()
+    return parser
+
+def main():
+    arg_parser = get_parser()
+    args = arg_parser.parse_args()
 
     windows_size = args.windows_size or WINDOWS_SIZE
-
-    print windows_size
 
     # Check that at least one parameter is provided
     if not any([args.raw, args.average,
                 args.median, args.hull,
                 args.elevation]):
-        print '*' * 33
-        print "* Add at least one plot to draw *"
-        print '*' * 33
-        parser.print_help()
+        print('*' * 33)
+        print("* Add at least one plot to draw *")
+        print('*' * 33)
+        arg_parser.print_help()
         exit(1)
 
     plt.figure(figsize=(15, 8))
@@ -160,7 +105,7 @@ def main():
                 for point in segment.points:
                     gpx_points.append(
                         GPXPoint(
-                            (point.time - ref_time).total_seconds(),
+                            float((point.time - ref_time).total_seconds()),
                             (point.latitude, point.longitude),
                             point.elevation
                         )
@@ -168,36 +113,49 @@ def main():
 
         prev = gpx_points[0]
         gpx_points[0].distance = 0
+        gpx_points[0].cumulative_distance = 0
         gpx_points[0].raw_speed = 0
 
         for gpx_point in gpx_points[1:]:
+            # Compute distance from previous point
             xy_dist = vincenty(prev.coordonates, gpx_point.coordonates).meters
             gpx_point.distance = xy_dist
+
+            # Set cumulative distance
+            gpx_point.cumulative_distance = prev.cumulative_distance + xy_dist
+
+            # Get time diff from last point
             xy_time = gpx_point.time - prev.time
 
-            gpx_point.raw_speed = xy_dist / xy_time * 3.6
+            # Then calculate current speed
+            gpx_point.raw_speed = xy_dist / xy_time * 3.6 if xy_time else \
+                                  prev.raw_speed
 
             prev = gpx_point
 
         gpx_points[0].raw_speed = gpx_points[1].raw_speed
 
+        x_axis= 'time'
+        # x_axis = 'distance'
+
         if args.raw:
-            display_in_graph(gpx_points, 'raw_speed', 'blue')
+            display_in_graph(gpx_points, 'raw_speed', 'blue', x_axis)
         if args.average:
             moving_average(gpx_points, windows_size)
-            display_in_graph(gpx_points, 'average_speed', 'orange')
+            display_in_graph(gpx_points, 'average_speed', 'orange', x_axis)
         if args.median:
             moving_median(gpx_points, windows_size)
-            display_in_graph(gpx_points, 'median_speed', 'red')
+            display_in_graph(gpx_points, 'median_speed', 'red', x_axis)
         if args.hull:
             hull_average(gpx_points, windows_size)
-            display_in_graph(gpx_points, 'hull_speed', 'green')
+            display_in_graph(gpx_points, 'hull_speed', 'green', x_axis)
         if args.elevation:
-            display_in_graph(gpx_points, 'elevation', 'pink')
+            display_in_graph(gpx_points, 'elevation', 'pink', x_axis)
 
-    # plt.yticks(np.linspace(-1,1,5,endpoint=True))
 
     plt.legend(loc='upper left', frameon=False)
+    plt.xlabel(x_axis)
+    plt.ylabel('speed')
     plt.grid()
     plt.show()
 
