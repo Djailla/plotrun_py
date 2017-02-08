@@ -42,6 +42,7 @@ def display_in_graph(gpx_points, value_type, color="blue", x_axis='time'):
         label=value_type
     )
 
+
 class GPXPoint(object):
     """
     Store all information computed per point
@@ -62,6 +63,7 @@ class GPXPoint(object):
         self.coordonates = coordonates
         self.elevation = elevation
 
+
 def get_parser():
     parser = argparse.ArgumentParser(description='Set the parameters.')
     parser.add_argument('--raw', action='store_true')
@@ -71,10 +73,12 @@ def get_parser():
     parser.add_argument('--bpm', action='store_true')
     parser.add_argument('--elevation', action='store_true')
     parser.add_argument('-s', type=int, action="store", dest="windows_size")
-    parser.add_argument('--pace', action='store_true', help='Enabled to switch from speed to pace')
+    parser.add_argument('--pace', action='store_true',
+                        help='Enabled to switch from speed to pace')
     parser.add_argument('gpx_file')
 
     return parser
+
 
 def main():
     arg_parser = get_parser()
@@ -128,14 +132,16 @@ def main():
             xy_time = gpx_point.time - prev.time
 
             # Then calculate current speed
-            gpx_point.raw_speed = xy_dist / xy_time * 3.6 if xy_time else \
-                                  prev.raw_speed
+            gpx_point.raw_speed = (
+                xy_dist / xy_time * 3.6
+                if xy_time else prev.raw_speed
+            )
 
             prev = gpx_point
 
         gpx_points[0].raw_speed = gpx_points[1].raw_speed
 
-        x_axis= 'time'
+        x_axis = 'time'
         # x_axis = 'distance'
 
         if args.raw:
@@ -151,7 +157,6 @@ def main():
             display_in_graph(gpx_points, 'hull_speed', 'green', x_axis)
         if args.elevation:
             display_in_graph(gpx_points, 'elevation', 'pink', x_axis)
-
 
     plt.legend(loc='upper left', frameon=False)
     plt.xlabel(x_axis)
