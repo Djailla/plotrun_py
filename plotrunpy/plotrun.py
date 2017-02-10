@@ -31,16 +31,59 @@ from helper import (
 
 WINDOWS_SIZE = 15
 
+# pylint: disable=bad-whitespace
+GRAPH_CONFIG = {
+    # Attribute        Label        is_speed  color    left_y
+    'raw_speed':     ('Raw',        True,    'blue',   True),
+    'average_speed': ('Average',    True,    'orange', True),
+    'median_speed':  ('Median',     True,    'red',    True),
+    'hull_speed':    ('Hull',       True,    'green',  True),
+    'elevation':     ('Elevation',  False,   'yellow', False),
+    'bpm':           ('Heart Rate', False,   'pink',   False),
+}
 
-def display_in_graph(gpx_points, value_type, color="blue", x_axis='time'):
-    """Add a data in final graph"""
-    plt.plot(
-        [gpx_point.time for gpx_point in gpx_points] if x_axis == 'time' else
-        [gpx_point.cumulative_distance for gpx_point in gpx_points],
-        [getattr(gpx_point, value_type) for gpx_point in gpx_points],
-        color=color, linewidth=1.0, linestyle="-",
-        label=value_type
-    )
+
+class DataGraph(object):
+    x_data = []
+    x_time = True
+    is_speed = True
+    y_data = []
+    color = 'blue'
+    label = 'Unknown'
+
+    def __init__(self, gpx_points, attribute, speed_pace=True, x_time=True):
+        if attribute not in GRAPH_CONFIG:
+            raise Exception
+
+        self.label, self.is_speed, self.color, self.left_y = \
+            GRAPH_CONFIG.get(attribute)
+
+        if self.is_speed and not speed_pace:
+            # Convert speed to pace
+            self.x_data = [
+                getattr(gpx_point, attribute) / 3600 for
+                gpx_point in gpx_points
+            ]
+        else:
+            self.x_data = [
+                getattr(gpx_point, attribute) for
+                gpx_point in gpx_points
+            ]
+
+        if x_time:
+            self.y_data = [gpx_point.time for gpx_point in gpx_points]
+        else:
+            self.y_data = [gpx_point.distance for gpx_point in gpx_points]
+
+    def graph(self):
+        plt.plot(
+            self.y_data,
+            self.x_data,
+            color=self.color,
+            linewidth=1.0,
+            linestyle="-",
+            label=self.label,
+        )
 
 
 class GPXPoint(object):
@@ -145,18 +188,23 @@ def main():
         # x_axis = 'distance'
 
         if args.raw:
-            display_in_graph(gpx_points, 'raw_speed', 'blue', x_axis)
+            raw_line = DataGraph(gpx_points, 'raw_speed')
+            raw_line.graph()
         if args.average:
             moving_average(gpx_points, windows_size)
-            display_in_graph(gpx_points, 'average_speed', 'orange', x_axis)
+            avg_line = DataGraph(gpx_points, 'average_speed')
+            avg_line.graph()
         if args.median:
             moving_median(gpx_points, windows_size)
-            display_in_graph(gpx_points, 'median_speed', 'red', x_axis)
+            med_line = DataGraph(gpx_points, 'median_speed')
+            med_line.graph()
         if args.hull:
             hull_average(gpx_points, windows_size)
-            display_in_graph(gpx_points, 'hull_speed', 'green', x_axis)
+            hul_line = DataGraph(gpx_points, 'hull_speed')
+            hul_line.graph()
         if args.elevation:
-            display_in_graph(gpx_points, 'elevation', 'pink', x_axis)
+            ele_line = DataGraph(gpx_points, 'elevation')
+            ele_line.graph()
 
     plt.legend(loc='upper left', frameon=False)
     plt.xlabel(x_axis)
