@@ -10,6 +10,7 @@ INPUT_DATE_FORMATS = [
 OUTPUT_DATE_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
 def parse_time(string):
+    """Convert string to datetime data"""
     if not string:
         return None
     if 'T' in string:
@@ -35,31 +36,3 @@ def parse_time(string):
         except ValueError:
             pass
     raise Exception('Invalid time: %s' % string)
-
-
-
-class FloatConverter(object):
-    def __init__(self):
-        self.from_string = lambda string: None if string is None else float(string.strip())
-        self.to_string = lambda flt: str(flt)
-
-
-class IntConverter(object):
-    def __init__(self):
-        self.from_string = lambda string: None if string is None else int(string.strip())
-        self.to_string = lambda flt: str(flt)
-
-
-class TimeConverter(object):
-    def from_string(self, string):
-        try:
-            return parse_time(string)
-        except:
-            return None
-    def to_string(self, time):
-        return time.strftime(OUTPUT_DATE_FORMAT) if time else None
-
-
-INT_TYPE = IntConverter()
-FLOAT_TYPE = FloatConverter()
-TIME_TYPE = TimeConverter()

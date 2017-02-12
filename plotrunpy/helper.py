@@ -11,7 +11,7 @@ import numpy as np
 
 def moving_average(gpx_points, windows_size):
     """Compute moving average for value list"""
-    x_values = [gpx_point.raw_speed for gpx_point in gpx_points]
+    x_values = [gpx_point.watch_speed for gpx_point in gpx_points]
     mid_interval = windows_size // 2
     cumsum = np.cumsum(x_values)
 
@@ -47,7 +47,7 @@ def moving_average_list(input_list, windows_size):
 
 def moving_median(gpx_points, windows_size):
     """Compute moving median for value list"""
-    x_values = [gpx_point.raw_speed for gpx_point in gpx_points]
+    x_values = [gpx_point.watch_speed for gpx_point in gpx_points]
     mid_interval = windows_size // 2
 
     for x_idx in range(len(x_values)):
@@ -58,7 +58,7 @@ def moving_median(gpx_points, windows_size):
 
 def hull_average(gpx_points, windows_size):
     """Compute hull average for value list"""
-    x_values = [gpx_point.raw_speed for gpx_point in gpx_points]
+    x_values = [gpx_point.watch_speed for gpx_point in gpx_points]
 
     moving_average_half = moving_average_list(x_values, windows_size // 2)
     moving_average_full = moving_average_list(x_values, windows_size)
