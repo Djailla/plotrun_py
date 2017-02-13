@@ -29,14 +29,14 @@ WINDOWS_SIZE = 15
 # pylint: disable=bad-whitespace
 GRAPH_CONFIG = {
     # Attribute        Label        is_speed  color    left_y
-    'watch_speed':    ('Watch',      True,    'blue',   True),
-    'gps_speed':      ('GPS',        True,    'green',  True),
-    'improved_speed': ('Improved',   True,    'red',    True),
-    'average_speed':  ('Average',    True,    'orange', True),
-    'median_speed':   ('Median',     True,    'red',    True),
-    'hull_speed':     ('Hull',       True,    'green',  True),
-    'elevation':      ('Elevation',  False,   'yellow', False),
-    'heart_rate':     ('Heart Rate', False,   'pink',   False),
+    'watch_speed':    ('Watch',      True,    'blue',    True),
+    'gps_speed':      ('GPS',        True,    'green',   True),
+    'improved_speed': ('Improved',   True,    'red',     True),
+    'average_speed':  ('Average',    True,    'magenta', True),
+    'median_speed':   ('Median',     True,    'red',     True),
+    'hull_speed':     ('Hull',       True,    'green',   True),
+    'elevation':      ('Elevation',  False,   'yellow',  False),
+    'heart_rate':     ('Heart Rate', False,   'pink',    False),
 }
 
 
@@ -56,14 +56,16 @@ class GraphOptions(object):
         """
         Return label to display on the x axis according configuration
         """
-        return 'Time (s)' if self.x_axis_data == 'time' else 'Distance (km)'
+        return 'Time (s)' if self.x_axis_data == 'time'\
+                          else 'Distance (km)'
 
     @property
     def y_label(self):
         """
         Return label to display on the y axis according configuration
         """
-        return 'Speed (km/h)' if self.y_axis_data == 'speed' else 'Pace (min/km)'
+        return 'Speed (km/h)' if self.y_axis_data == 'speed'\
+                              else 'Pace (min/km)'
 
 
 class DataGraph(object):
@@ -106,20 +108,24 @@ class DataGraph(object):
     def __repr__(self):
         return "%s" % (self.is_speed)
 
-    def graph(self):
-        """Display the plot on graph"""
+    @property
+    def graph_label(self):
+        """Generate the label to display on the graph for this plot"""
         if self.is_speed:
-            param = ' speed' if self.graph_options.y_axis_data == 'speed' else ' pace'
+            param = ' speed' if self.graph_options.y_axis_data == 'speed'\
+                    else ' pace'
         else:
             param = ""
 
-        plt.plot(
-            self.y_data,
-            self.x_data,
-            color=self.color,
-            linewidth=1.0,
-            linestyle="-",
-            label=self.label + param,
+        return self.label + param
+
+    def graph(self):
+        """Display the plot on graph"""
+        new_plot = plt.subplot()
+        new_plot.plot(
+            self.y_data, self.x_data,
+            color=self.color, linewidth=1.0, linestyle="-",
+            label=self.graph_label,
         )
 
 
@@ -154,10 +160,12 @@ def get_parser():
     parser.add_argument('--bpm', action='store_true')
     parser.add_argument('--elevation', action='store_true')
     parser.add_argument('-s', type=int, action="store", dest="windows_size")
-    parser.add_argument('--pace', action='store_true',
-                        help='Enabled to switch from speed to pace')
-    parser.add_argument('--x_distance', action='store_true',
-                        help='Set distance instead of time as parameter for x axis')
+    parser.add_argument(
+        '--pace', action='store_true',
+        help='Enabled to switch from speed to pace')
+    parser.add_argument(
+        '--x_distance', action='store_true',
+        help='Set distance instead of time as parameter for x axis')
     parser.add_argument('gpx_file')
 
     return parser
@@ -219,6 +227,8 @@ def main():
     plt.legend(loc='upper left', frameon=False)
     plt.xlabel(graph_options.x_label)
     plt.ylabel(graph_options.y_label)
+
+    # fig.tight_layout()
     plt.grid()
     plt.show()
 
