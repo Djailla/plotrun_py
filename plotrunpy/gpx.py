@@ -15,7 +15,7 @@ class GPXPoint(object):
     """
     lat = 0
     lon = 0
-    ele = 0
+    elevation = 0
     time = None
     heart_rate = 0
     cadence = 0
@@ -25,14 +25,14 @@ class GPXPoint(object):
     gps_speed = 0
     watch_speed = 0
 
-    def __init__(self, lat, lon, time, elapsed_time, ele=0,
+    def __init__(self, lat, lon, time, elapsed_time, elevation=0,
                  heart_rate=None, distance=None, cadence=None,
                  watch_speed=None):
         self.lat = float(lat)
         self.lon = float(lon)
         self.time = parse_time(time)
         self.elapsed_time = elapsed_time
-        self.ele = int(round(float(ele)))
+        self.elevation = int(round(float(elevation)))
         self.heart_rate = int(heart_rate) if heart_rate else None
         self.distance = float(distance) if distance else None
         self.cadence = int(cadence) if cadence else None
@@ -85,7 +85,7 @@ def parse_gpx_file(file_path):
                     gpx_point.get('@lon'),
                     gpx_point.get('time'),
                     (parse_time(gpx_point.get('time')) - start_time),
-                    ele=gpx_point.get('ele'),
+                    elevation=gpx_point.get('ele'),
                     heart_rate=gpx_point.get('extensions', {}).\
                         get('gpxtpx:TrackPointExtension', {}).\
                             get('gpxtpx:hr', None),

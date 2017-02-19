@@ -16,12 +16,12 @@ setup(
         'numpy',
         'gpxpy',
         'geopy',
-        'matplotlib'
+        'matplotlib',
     ],
     classifiers=[
         "Programming Language :: Python",
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 3",
     ],
-    scripts=['gpxinfo']
+    scripts=['plotrun']
 )

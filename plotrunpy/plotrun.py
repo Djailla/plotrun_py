@@ -35,10 +35,12 @@ GRAPH_CONFIG = {
     'average_speed':  ('Average',    True,    'magenta', True),
     'median_speed':   ('Median',     True,    'red',     True),
     'hull_speed':     ('Hull',       True,    'green',   True),
-    'elevation':      ('Elevation',  False,   'yellow',  False),
+    'elevation':      ('Elevation',  False,   'gray',    False),
     'heart_rate':     ('Heart Rate', False,   'pink',    False),
 }
 
+PLOT_LIST = []
+AXES_LIST = []
 
 class GraphOptions(object):
     """
@@ -52,7 +54,7 @@ class GraphOptions(object):
         self.y_axis_data = y_axis_data
 
     @property
-    def x_label(self):
+    def x_axis_label(self):
         """
         Return label to display on the x axis according configuration
         """
@@ -60,7 +62,7 @@ class GraphOptions(object):
                           else 'Distance (km)'
 
     @property
-    def y_label(self):
+    def y_axis_label(self):
         """
         Return label to display on the y axis according configuration
         """
@@ -72,6 +74,7 @@ class DataGraph(object):
     """
     DataGraph class contains all plot related informations
     """
+    attribute = None
     x_data = []
     x_time = True
     is_speed = True
@@ -79,11 +82,13 @@ class DataGraph(object):
     color = 'blue'
     label = 'Unknown'
     graph_options = None
+    plot = None
 
     def __init__(self, gpx_points, attribute, graph_options):
         if attribute not in GRAPH_CONFIG:
             raise Exception
 
+        self.attribute = attribute
         self.label, self.is_speed, self.color, self.left_y = \
             GRAPH_CONFIG.get(attribute)
 
@@ -109,7 +114,7 @@ class DataGraph(object):
         return "%s" % (self.is_speed)
 
     @property
-    def graph_label(self):
+    def plot_label(self):
         """Generate the label to display on the graph for this plot"""
         if self.is_speed:
             param = ' speed' if self.graph_options.y_axis_data == 'speed'\
@@ -119,14 +124,45 @@ class DataGraph(object):
 
         return self.label + param
 
-    def graph(self):
+    @property
+    def y_axis_label(self):
+        """
+        Return label to display on the y axis according configuration
+        """
+        return 'Elevation (m)' if self.attribute == 'elevation'\
+                               else 'Heart Rate (bpm)'
+
+    def graph_plot(self, axes):
+        """Generic graph plot function"""
+        if self.is_speed:
+            self.plot = axes.plot(
+                self.y_data, self.x_data,
+                color=self.color, linewidth=1.5, linestyle="-",
+                label=self.plot_label,
+            )
+        else:
+            self.plot = axes.fill_between(
+                self.y_data,
+                min(self.x_data),
+                self.x_data,
+                color=self.color, linewidth=1.0, linestyle="-",
+                label=self.plot_label, alpha=0.3,
+            )
+
+    def graph(self, axes):
         """Display the plot on graph"""
-        new_plot = plt.subplot()
-        new_plot.plot(
-            self.y_data, self.x_data,
-            color=self.color, linewidth=1.0, linestyle="-",
-            label=self.graph_label,
-        )
+        if self.is_speed:
+            self.graph_plot(axes)
+        else:
+            if len(PLOT_LIST) > 0:
+                axes2 = axes.twinx()
+                self.graph_plot(axes2)
+                axes2.set_ylabel(self.y_axis_label)
+                AXES_LIST.append(axes2)
+            else:
+                self.graph_plot(axes)
+
+        PLOT_LIST.append(self.plot)
 
 
 class GPXPoint(object):
@@ -157,8 +193,12 @@ def get_parser():
     parser.add_argument('--average', action='store_true')
     parser.add_argument('--median', action='store_true')
     parser.add_argument('--hull', action='store_true')
-    parser.add_argument('--bpm', action='store_true')
-    parser.add_argument('--elevation', action='store_true')
+
+
+    right_y = parser.add_mutually_exclusive_group()
+    right_y.add_argument('--bpm', action='store_true')
+    right_y.add_argument('--elevation', action='store_true')
+
     parser.add_argument('-s', type=int, action="store", dest="windows_size")
     parser.add_argument(
         '--pace', action='store_true',
@@ -171,65 +211,84 @@ def get_parser():
     return parser
 
 
+def error_message(arg_parser, message='Unknown error'):
+    """Print error message and exit"""
+    print('*' * 33)
+    print("* %s *", message)
+    print('*' * 33)
+    arg_parser.print_help()
+    exit(1)
+
+
 def main():
     """Main plotrun function"""
+
+    # Parse input args
     arg_parser = get_parser()
     args = arg_parser.parse_args()
-
     windows_size = args.windows_size or WINDOWS_SIZE
 
-    # Check that at least one parameter is provided
-    if not any([args.raw, args.average,
-                args.median, args.hull,
-                args.elevation]):
-        print('*' * 33)
-        print("* Add at least one plot to draw *")
-        print('*' * 33)
-        arg_parser.print_help()
-        exit(1)
+    # # Check that at least one parameter is provided
+    # if not any([args.raw, args.average,
+    #             args.median, args.hull]):
+    #     error_message(arg_parser, "Add at least one plot to draw")
 
+    # Parse GPX file to generate the list of GPX points
     gpx_points = parse_gpx_file(args.gpx_file)
 
-    plt.figure(figsize=(15, 8))
-
+    # Prepare the resource to draw content
+    fig = plt.figure(figsize=(15, 8))
     graph_options = GraphOptions(
         'distance' if args.x_distance else 'time',
         'pace' if args.pace else 'speed'
     )
 
+    axes1 = fig.add_subplot(111)
+    AXES_LIST.append(axes1)
+
+    # Add a plot per data requested
     if args.raw:
         # raw_line = DataGraph(gpx_points, 'gps_speed')
         # raw_line.graph()
         raw_line2 = DataGraph(gpx_points, 'watch_speed', graph_options)
-        raw_line2.graph()
+        raw_line2.graph(axes1)
         # raw_line3 = DataGraph(gpx_points, 'improved_speed')
         # raw_line3.graph()
     if args.average:
         moving_average(gpx_points, windows_size)
         avg_line = DataGraph(gpx_points, 'average_speed', graph_options)
-        avg_line.graph()
+        avg_line.graph(axes1)
     if args.median:
         moving_median(gpx_points, windows_size)
         med_line = DataGraph(gpx_points, 'median_speed', graph_options)
-        med_line.graph()
+        med_line.graph(axes1)
     if args.hull:
         hull_average(gpx_points, windows_size)
         hul_line = DataGraph(gpx_points, 'hull_speed', graph_options)
-        hul_line.graph()
+        hul_line.graph(axes1)
+
+    # Check right Y axis data
     if args.elevation:
         ele_line = DataGraph(gpx_points, 'elevation', graph_options)
-        ele_line.graph()
+        ele_line.graph(axes1)
     if args.bpm:
         ele_line = DataGraph(gpx_points, 'heart_rate', graph_options)
-        ele_line.graph()
+        ele_line.graph(axes1)
 
+    plt.autoscale(enable=True, axis='x', tight=True)
 
-    plt.legend(loc='upper left', frameon=False)
-    plt.xlabel(graph_options.x_label)
-    plt.ylabel(graph_options.y_label)
+    axes1.grid()
+    axes1.set_xlabel(graph_options.x_axis_label)
+    axes1.set_ylabel(graph_options.y_axis_label)
 
-    # fig.tight_layout()
-    plt.grid()
+    handle1, line1 = AXES_LIST[0].get_legend_handles_labels()
+    if len(AXES_LIST) == 2:
+        handle2, line2 = AXES_LIST[1].get_legend_handles_labels()
+        axes1.legend(handle1 + handle2, line1 + line2, loc=2)
+    else:
+        axes1.legend(handle1, line1, loc=2)
+
+    fig.tight_layout()
     plt.show()
 
 if __name__ == '__main__':
