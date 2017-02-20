@@ -54,7 +54,7 @@ class GPXPoint(object):
     @property
     def float_time(self):
         """Return time as a float seconds value"""
-        return float(self.elapsed_time.total_seconds())
+        return float(self.elapsed_time.total_seconds()) / 60
 
     @property
     def improved_speed(self):

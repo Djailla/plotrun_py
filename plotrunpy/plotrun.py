@@ -16,6 +16,7 @@ import argparse
 
 # matplotlib for dynamical display view
 import matplotlib.pyplot as plt
+import matplotlib.ticker as plticker
 
 from helper import (
     moving_average,
@@ -58,7 +59,7 @@ class GraphOptions(object):
         """
         Return label to display on the x axis according configuration
         """
-        return 'Time (s)' if self.x_axis_data == 'time'\
+        return 'Time (min)' if self.x_axis_data == 'time'\
                           else 'Distance (km)'
 
     @property
@@ -158,32 +159,12 @@ class DataGraph(object):
                 axes2 = axes.twinx()
                 self.graph_plot(axes2)
                 axes2.set_ylabel(self.y_axis_label)
+                # axes2.grid(linestyle='--', color=self.color)
                 AXES_LIST.append(axes2)
             else:
                 self.graph_plot(axes)
 
         PLOT_LIST.append(self.plot)
-
-
-class GPXPoint(object):
-    """
-    Store all information computed per point
-    """
-    time = 0
-    coordonates = None
-    elevation = None
-    distance = 0
-    cumulative_distance = 0
-
-    raw_speed = 0
-    median_speed = 0
-    average_speed = 0
-    hull_speed = 0
-
-    def __init__(self, time, coordonates, elevation=None):
-        self.time = time
-        self.coordonates = coordonates
-        self.elevation = elevation
 
 
 def get_parser():
@@ -277,9 +258,16 @@ def main():
 
     plt.autoscale(enable=True, axis='x', tight=True)
 
-    axes1.grid()
+    axes1.grid(linestyle='--')
     axes1.set_xlabel(graph_options.x_axis_label)
     axes1.set_ylabel(graph_options.y_axis_label)
+
+    xloc = plticker.MultipleLocator(base=5.0)
+    axes1.xaxis.set_major_locator(xloc)
+
+    # TODO: Set nice grid when using pace instead of speed
+    yloc = plticker.MultipleLocator(base=1.0)
+    axes1.yaxis.set_major_locator(yloc)
 
     handle1, line1 = AXES_LIST[0].get_legend_handles_labels()
     if len(AXES_LIST) == 2:
