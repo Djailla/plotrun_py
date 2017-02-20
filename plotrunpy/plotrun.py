@@ -86,7 +86,7 @@ class DataGraph(object):
     graph_options = None
     plot = None
 
-    def __init__(self, gpx_points, attribute, graph_options):
+    def __init__(self, gpx_points, attribute, graph_options, axes):
         if attribute not in GRAPH_CONFIG:
             raise Exception
 
@@ -111,6 +111,8 @@ class DataGraph(object):
             self.y_data = [gpx_point.float_time for gpx_point in gpx_points]
         else:
             self.y_data = [gpx_point.distance for gpx_point in gpx_points]
+
+        self.graph(axes)
 
     def __repr__(self):
         return "%s" % (self.is_speed)
@@ -230,32 +232,24 @@ def main():
 
     # Add a plot per data requested
     if args.raw:
-        # raw_line = DataGraph(gpx_points, 'gps_speed')
-        # raw_line.graph()
-        raw_line2 = DataGraph(gpx_points, 'watch_speed', graph_options)
-        raw_line2.graph(axes1)
-        # raw_line3 = DataGraph(gpx_points, 'improved_speed')
-        # raw_line3.graph()
+        # DataGraph(gpx_points, 'gps_speed', graph_options, axes1)
+        DataGraph(gpx_points, 'watch_speed', graph_options, axes1)
+        # DataGraph(gpx_points, 'improved_speed', graph_options, axes1)
     if args.average:
         moving_average(gpx_points, windows_size)
-        avg_line = DataGraph(gpx_points, 'average_speed', graph_options)
-        avg_line.graph(axes1)
+        DataGraph(gpx_points, 'average_speed', graph_options, axes1)
     if args.median:
         moving_median(gpx_points, windows_size)
-        med_line = DataGraph(gpx_points, 'median_speed', graph_options)
-        med_line.graph(axes1)
+        DataGraph(gpx_points, 'median_speed', graph_options, axes1)
     if args.hull:
         hull_average(gpx_points, windows_size)
-        hul_line = DataGraph(gpx_points, 'hull_speed', graph_options)
-        hul_line.graph(axes1)
+        DataGraph(gpx_points, 'hull_speed', graph_options, axes1)
 
     # Check right Y axis data
     if args.elevation:
-        ele_line = DataGraph(gpx_points, 'elevation', graph_options)
-        ele_line.graph(axes1)
+        DataGraph(gpx_points, 'elevation', graph_options, axes1)
     if args.bpm:
-        ele_line = DataGraph(gpx_points, 'heart_rate', graph_options)
-        ele_line.graph(axes1)
+        DataGraph(gpx_points, 'heart_rate', graph_options, axes1)
 
     plt.autoscale(enable=True, axis='x', tight=True)
 
