@@ -13,6 +13,7 @@ Run with: python plotrun.py [GPX file path]
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import datetime
 
 # matplotlib for dynamical display view
 import matplotlib.pyplot as plt
@@ -258,16 +259,24 @@ def main():
 
     plt.autoscale(enable=True, axis='x', tight=True)
 
-    axes1.grid(linestyle='--')
+    axes1.grid(linestyle=':', alpha=0.5)
     axes1.set_xlabel(graph_options.x_axis_label)
     axes1.set_ylabel(graph_options.y_axis_label)
 
     xloc = plticker.MultipleLocator(base=5.0)
     axes1.xaxis.set_major_locator(xloc)
 
-    # TODO: Set nice grid when using pace instead of speed
-    yloc = plticker.MultipleLocator(base=1.0)
-    axes1.yaxis.set_major_locator(yloc)
+    if graph_options.y_axis_data == 'speed':
+        yloc = plticker.MultipleLocator(base=1.0)
+        axes1.yaxis.set_major_locator(yloc)
+    else:
+        def time_ticks(x_input, _pos):
+            """Set ticks as duration"""
+            delta = datetime.timedelta(seconds=(x_input * 60))
+            return str(delta)
+
+        formatter = plticker.FuncFormatter(time_ticks)
+        axes1.yaxis.set_major_formatter(formatter)
 
     handle1, line1 = AXES_LIST[0].get_legend_handles_labels()
     if len(AXES_LIST) == 2:
