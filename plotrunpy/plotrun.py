@@ -94,23 +94,23 @@ class DataGraph(object):
         self.label, self.is_speed, self.color, self.left_y = \
             GRAPH_CONFIG.get(attribute)
 
+        self.graph_options = graph_options
+        if graph_options.x_axis_data == 'time':
+            self.x_data = [gpx_point.float_time for gpx_point in gpx_points]
+        else:
+            self.x_data = [gpx_point.distance / 1000 for gpx_point in gpx_points]
+
         if self.is_speed and graph_options.y_axis_data == 'pace':
             # Convert speed to pace
-            self.x_data = [
+            self.y_data = [
                 60 / getattr(gpx_point, attribute) for
                 gpx_point in gpx_points
             ]
         else:
-            self.x_data = [
+            self.y_data = [
                 getattr(gpx_point, attribute) for
                 gpx_point in gpx_points
             ]
-
-        self.graph_options = graph_options
-        if graph_options.x_axis_data == 'time':
-            self.y_data = [gpx_point.float_time for gpx_point in gpx_points]
-        else:
-            self.y_data = [gpx_point.distance for gpx_point in gpx_points]
 
         self.graph(axes)
 
@@ -140,15 +140,15 @@ class DataGraph(object):
         """Generic graph plot function"""
         if self.is_speed:
             self.plot = axes.plot(
-                self.y_data, self.x_data,
+                self.x_data, self.y_data,
                 color=self.color, linewidth=1.5, linestyle="-",
                 label=self.plot_label,
             )
         else:
             self.plot = axes.fill_between(
-                self.y_data,
-                min(self.x_data),
                 self.x_data,
+                min(self.y_data),
+                self.y_data,
                 color=self.color, linewidth=1.0, linestyle="-",
                 label=self.plot_label, alpha=0.3,
             )
@@ -257,7 +257,9 @@ def main():
     axes1.set_xlabel(graph_options.x_axis_label)
     axes1.set_ylabel(graph_options.y_axis_label)
 
-    xloc = plticker.MultipleLocator(base=5.0)
+    x_tick = 5 if graph_options.x_axis_data == 'time' else 1
+
+    xloc = plticker.MultipleLocator(base=x_tick)
     axes1.xaxis.set_major_locator(xloc)
 
     if graph_options.y_axis_data == 'speed':
