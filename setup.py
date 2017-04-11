@@ -14,9 +14,8 @@ setup(
     packages=['plotrunpy', ],
     install_requires=[
         'numpy',
-        'gpxpy',
-        'geopy',
         'matplotlib',
+        'xmltodict',
     ],
     classifiers=[
         "Programming Language :: Python",
