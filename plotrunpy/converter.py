@@ -9,6 +9,7 @@ INPUT_DATE_FORMATS = [
 ]
 OUTPUT_DATE_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
+
 def parse_time(string):
     """Convert string to datetime data"""
     if not string:

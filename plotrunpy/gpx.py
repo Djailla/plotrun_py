@@ -9,6 +9,7 @@ import xmltodict
 
 from converter import parse_time
 
+
 class GPXPoint(object):
     """
     Output object of the gpx parsing operation
@@ -61,6 +62,7 @@ class GPXPoint(object):
         """Return a computed speed"""
         return (5 * self.watch_speed + self.gps_speed) / 6
 
+
 def parse_gpx_file(file_path):
     """
     Parse a GPX file base on it's ``file_path``to generate a
@@ -70,8 +72,9 @@ def parse_gpx_file(file_path):
 
     with open(file_path, 'r') as gpx_file:
         gpx_dict = xmltodict.parse(gpx_file.read())
-        track = gpx_dict.get('gpx', {}).get('trk', {}).\
-                         get('trkseg', {}).get('trkpt', {})
+        track = gpx_dict.get(
+            'gpx', {}).get('trk', {}).get(
+                'trkseg', {}).get('trkpt', {})
 
         first = True
         for gpx_point in track:
@@ -86,12 +89,16 @@ def parse_gpx_file(file_path):
                     gpx_point.get('time'),
                     (parse_time(gpx_point.get('time')) - start_time),
                     elevation=gpx_point.get('ele'),
-                    heart_rate=gpx_point.get('extensions', {}).\
-                        get('gpxtpx:TrackPointExtension', {}).\
-                            get('gpxtpx:hr', None),
-                    distance=gpx_point.get('extensions', {}).get('gpxdata:distance', None),
-                    cadence=gpx_point.get('extensions', {}).get('gpxdata:cadence', None),
-                    watch_speed=gpx_point.get('extensions', {}).get('gpxdata:speed', None),
+                    heart_rate=gpx_point.get(
+                        'extensions', {}).get(
+                            'gpxtpx:TrackPointExtension', {}).get(
+                                'gpxtpx:hr', None),
+                    distance=gpx_point.get(
+                        'extensions', {}).get('gpxdata:distance', None),
+                    cadence=gpx_point.get(
+                        'extensions', {}).get('gpxdata:cadence', None),
+                    watch_speed=gpx_point.get(
+                        'extensions', {}).get('gpxdata:speed', None),
 
                 )
             )
@@ -110,7 +117,6 @@ def parse_gpx_file(file_path):
         prev = gpx_point
 
     gpx_points[0].gps_speed = gpx_points[1].gps_speed
-
 
     return gpx_points
 

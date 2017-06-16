@@ -44,6 +44,7 @@ GRAPH_CONFIG = {
 PLOT_LIST = []
 AXES_LIST = []
 
+
 class GraphOptions(object):
     """
     GraphOptions allow to set the value for the x and y axis
@@ -61,15 +62,15 @@ class GraphOptions(object):
         Return label to display on the x axis according configuration
         """
         return 'Time (min)' if self.x_axis_data == 'time'\
-                          else 'Distance (km)'
+               else 'Distance (km)'
 
     @property
     def y_axis_label(self):
         """
         Return label to display on the y axis according configuration
         """
-        return 'Speed (km/h)' if self.y_axis_data == 'speed'\
-                              else 'Pace (min/km)'
+        return 'Speed (km/h)' if self.y_axis_data == 'speed' else\
+               'Pace (min/km)'
 
 
 class DataGraph(object):
@@ -98,7 +99,8 @@ class DataGraph(object):
         if graph_options.x_axis_data == 'time':
             self.x_data = [gpx_point.float_time for gpx_point in gpx_points]
         else:
-            self.x_data = [gpx_point.distance / 1000 for gpx_point in gpx_points]
+            self.x_data = \
+                [gpx_point.distance / 1000 for gpx_point in gpx_points]
 
         if self.is_speed and graph_options.y_axis_data == 'pace':
             # Convert speed to pace
@@ -134,7 +136,7 @@ class DataGraph(object):
         Return label to display on the y axis according configuration
         """
         return 'Elevation (m)' if self.attribute == 'elevation'\
-                               else 'Heart Rate (bpm)'
+               else 'Heart Rate (bpm)'
 
     def graph_plot(self, axes):
         """Generic graph plot function"""
@@ -212,10 +214,10 @@ def main():
     args = arg_parser.parse_args()
     windows_size = args.windows_size or WINDOWS_SIZE
 
-    # # Check that at least one parameter is provided
-    # if not any([args.raw, args.average,
-    #             args.median, args.hull]):
-    #     error_message(arg_parser, "Add at least one plot to draw")
+    # Check that at least one parameter is provided
+    if not any([args.raw, args.average,
+                args.median, args.hull]):
+        args.raw = True
 
     # Parse GPX file to generate the list of GPX points
     gpx_points = parse_gpx_file(args.gpx_file)
